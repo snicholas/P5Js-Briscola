@@ -1,19 +1,22 @@
 function setup(){
     createCanvas(640,360);
-    pos = new pVector(100,100);
-    velocity = new pVector(2.5,5);
+    pos = new mover(new pVector(100,100),new pVector(0,0),new pVector(0.2,0.2),0);
+    //velocity = new mover(2,4);
 }
 
 function draw(){
-    background(255);
-    pos.add(velocity);
-    if((pos.x > width) || (pos.x < 0) ){
-        velocity.x*=-1;
+    background(198);
+    //pos.add(velocity);
+    pos.update();
+    //pos.position.log();
+    //pos.accelleration.log();
+    if((pos.position.x > width-8 && pos.accelleration.x > 0) || (pos.position.x < 8 && pos.accelleration.x < 0) ){
+        pos.accelleration.x*=-1;
     }
-    if((pos.y > height) || (pos.y < 0) ){
-        velocity.y*=-1;
+    if((pos.position.y > height-8 && pos.accelleration.y > 0) || (pos.position.y < 8 && pos.accelleration.y < 0) ){
+        pos.accelleration.y*=-1;
     }
     stroke(0);
     fill(275);
-    ellipse(pos.x, pos.y, 16,16);
+    ellipse(pos.position.x, pos.position.y, 16,16);
 }
