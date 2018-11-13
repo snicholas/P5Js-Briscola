@@ -1,4 +1,8 @@
 var deck = [];
+var statodeck = [];
+var statuses = ['indeck', 'p1hand', 'p1played', 'p2hand', 'p2played',
+    'p1taken', 'p2taken'
+];
 var briscola = null;
 var p1, p2;
 var curPlayer = 1;
@@ -6,13 +10,18 @@ var played = 0;
 var p1Played, p2Played;
 var finished = false;
 var wait = false;
+
+
+
 function setup() {
+    console.log(statodeck)
     createCanvas(400, 400);
     background(220);
     for (j = 0; j < 4; j++) {
         for (i = 1; i <= 10; i++) {
             var c = new Card(i + (j * 10), i, j + 1);
             deck.push(c);
+            statodeck.push(statuses[0]);
         }
     }
     shuffle(deck, true);
@@ -24,7 +33,14 @@ function setup() {
     p2.cards = deck.slice(0, 3);
     deck = deck.slice(3);
     curPlayer = p1.id;
+    for (var i = 0; i < p1.cards.length; i++) {
+        statodeck[p1.cards[i].id - 1] = statuses[1];
+    }
+    for (var i = 0; i < p2.cards.length; i++) {
+        statodeck[p2.cards[i].id - 1] = statuses[3];
+    }
 }
+
 function mouseClicked() {
     if (p1.ishuman && curPlayer === p1.id) {
         for (var i = 0; i < p1.cards.length; i++) {
@@ -35,6 +51,7 @@ function mouseClicked() {
                     p1.cards[i].chosen = true;
                     played++;
                     curPlayer = p2.id;
+                    statodeck[p1.cards[i].id - 1] = statuses[2];
                 }
             }
         }
@@ -49,15 +66,17 @@ function mouseClicked() {
                     p2.cards[i].chosen = true;
                     played++;
                     curPlayer = p1.id;
+                    statodeck[p1.cards[i].id - 1] = statuses[4];
                 }
             }
         }
     }
 }
+
 function draw() {
     background(220);
     if (!finished) {
-
+        console.log(statodeck);
         if (!p2Played && p2.cards.length > 0) {
             p2.cards.forEach(element => {
                 element.chosen = false;
@@ -96,7 +115,7 @@ function draw() {
         text("P2 score: " + p2.score, 300, 50);
         if (wait) {
             noLoop();
-            setTimeout(function () {
+            setTimeout(function() {
                 loop();
                 wait = false;
             }, 1000);
@@ -104,7 +123,7 @@ function draw() {
             if (played >= 2) {
                 played = 0;
                 winner(p1Played, p2Played);
-                wait=true;
+                wait = true;
                 p2Played = null;
                 p1Played = null;
                 if (deck.length == 0 && p1.cards.length == 0 && p2.cards.length == 0) {
@@ -115,10 +134,14 @@ function draw() {
                     if (curPlayer === p1.id) {
                         p1.cards.push(c[0]);
                         p2.cards.push(c[1]);
+                        statodeck[c[0].id - 1] = statuses[1];
+                        statodeck[c[1].id - 1] = statuses[3];
                     }
                     if (curPlayer === p2.id) {
                         p2.cards.push(c[0]);
                         p1.cards.push(c[1]);
+                        statodeck[c[0].id - 1] = statuses[3];
+                        statodeck[c[1].id - 1] = statuses[1];
                     }
                     deck = deck.slice(2);
                 }
@@ -132,16 +155,15 @@ function draw() {
                     p1.playCard(null, briscola.seme, cavv);
                 } else if (curPlayer === p1.id && !p1.ishuman && p1.selectedCard) {
                     p1Played = p1.selectedCard;
+                    statodeck[p1.selectedCard.id - 1] = statuses[2];
                     p1.selectedCard = null;
                     p1.isthinking = false
                     played++;
                     curPlayer = p2.id;
                     wait = true;
-                }
-                else if (curPlayer === p2.id && !p2.ishuman && !p2.isthinking && !p2.selectedCard) {
+                } else if (curPlayer === p2.id && !p2.ishuman && !p2.isthinking && !p2.selectedCard) {
                     p2.isthinking = true;
                     p2.selectedCard = null;
-                    console.log('p2', p2)
                     var cavv = 0;
                     if (p1Played) {
                         cavv = p1Played.id;
@@ -149,6 +171,7 @@ function draw() {
                     p2.playCard(null, briscola.seme, cavv);
                 } else if (curPlayer === p2.id && !p2.ishuman && p2.selectedCard) {
                     p2Played = p2.selectedCard;
+                    statodeck[p2.selectedCard.id - 1] = statuses[4];
                     p2.selectedCard = null;
                     p2.isthinking = false;
                     played++;
@@ -174,6 +197,7 @@ function draw() {
         noLoop();
     }
 }
+
 function winner(c1, c2) {
     console.log('-----------------------');
     c1.log();
@@ -183,34 +207,45 @@ function winner(c1, c2) {
     played = 0;
     if (c1.seme == briscola.seme && c2.seme != briscola.seme) {
         p1.score += (c1.value + c2.value);
+        statodeck[c1.id - 1] = statuses[5];
+        statodeck[c2.id - 1] = statuses[5];
         curPlayer = p1.id;
-    }
-    else if (c2.seme == briscola.seme && c1.seme != briscola.seme) {
+    } else if (c2.seme == briscola.seme && c1.seme != briscola.seme) {
         p2.score += (c1.value + c2.value);
+        statodeck[c1.id - 1] = statuses[6];
+        statodeck[c2.id - 1] = statuses[6];
         curPlayer = p2.id;
-    }
-    else if (c1.value > c2.value && c1.seme === c2.seme) {
+    } else if (c1.value > c2.value && c1.seme === c2.seme) {
         p1.score += (c1.value + c2.value);
+        statodeck[c1.id - 1] = statuses[5];
+        statodeck[c2.id - 1] = statuses[5];
         curPlayer = p1.id;
-    }
-    else if (c2.value == c1.value && c1.seme === c2.seme && c2.numuero > c1.numero) {
+    } else if (c2.value == c1.value && c1.seme === c2.seme && c2.numuero > c1.numero) {
         p2.score += (c1.value + c2.value);
+        statodeck[c1.id - 1] = statuses[6];
+        statodeck[c2.id - 1] = statuses[6];
         curPlayer = p2.id;
     } else if (c1.value > c2.value && c1.seme === c2.seme && c1.numuero > c2.numero) {
         p1.score += (c1.value + c2.value);
+        statodeck[c1.id - 1] = statuses[5];
+        statodeck[c2.id - 1] = statuses[5];
         curPlayer = p1.id;
-    }
-    else if (c2.value > c1.value && c1.seme === c2.seme) {
+    } else if (c2.value > c1.value && c1.seme === c2.seme) {
         p2.score += (c1.value + c2.value);
+        statodeck[c1.id - 1] = statuses[6];
+        statodeck[c2.id - 1] = statuses[6];
         curPlayer = p2.id;
-    }
-    else {
+    } else {
         if (curPlayer === p1.id) {
             p1.score += (c1.value + c2.value);
+            statodeck[c1.id - 1] = statuses[5];
+            statodeck[c2.id - 1] = statuses[5];
             curPlayer = p1.id;
         }
         if (curPlayer === p2.id) {
             p2.score += (c1.value + c2.value);
+            statodeck[c1.id - 1] = statuses[6];
+            statodeck[c2.id - 1] = statuses[6];
             curPlayer = p2.id;
         }
     }
