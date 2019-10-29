@@ -17,8 +17,8 @@ class Model(tf.keras.Model):
     def __init__(self, num_actions):
         super().__init__('mlp_policy')
         # no tf.get_variable(), just simple Keras API
-        self.hidden1 = kl.Dense(256, activation='tanh')
-        self.hidden2 = kl.Dense(256, activation='relu')
+        self.hidden1 = kl.Dense(16, activation='relu')
+        self.hidden2 = kl.Dense(16, activation='relu')
         self.value = kl.Dense(1, name='value')
         # logits are unnormalized log probabilities
         self.logits = kl.Dense(num_actions, name='policy_logits')
@@ -41,6 +41,7 @@ class Model(tf.keras.Model):
         return np.squeeze(action, axis=-1), np.squeeze(value, axis=-1)
 
 class envn():
+    statuses = ['indeck', 'hand', 'played', 'p2played','p1taken', 'p2taken']
     deck = []
     seed = -1
     player=-1
@@ -59,35 +60,49 @@ class envn():
         #     self.deck[cards[i]]=3
         self.obs=self.getobs()
         self.observation_space = self.getobs()
-        print(self.obs)
+        # print(self.obs)
         return self.obs
     def getobs(self):
         ob=[]
         ob.extend(self.deck)
-        ob.append(self.seed)
+        # ob.append(self.seed)
+        samples = [i for i,x in enumerate(self.deck) if x==1]
+        for i in range(3-len(samples)):
+            samples.append(-1)
+        # ob.extend(samples)
+        # print(ob)
         return np.array(ob)
+    def cardgood(self, action):
+        if self.deck[action]==self.player:
+            return action
+        else:
+            samples = [i for i,x in enumerate(self.deck) if x==1]
+            return random.sample(samples,1)[0]
     def step(self, action):
+        # print('action:',action)
         reward = -1
         if self.deck[action]==self.player:
-            self.deck[action]=9
+            self.deck[action]=3
             samples = [i for i,x in enumerate(self.deck) if x==0]
             if(len(samples)>0):
                 card = random.sample(samples,1)[0]
                 self.deck[card]=self.player
-            reward=10
+            reward=1
+            self.obs=self.getobs()
+            self.observation_space = self.obs
+            return self.obs,reward, len([x for x in self.deck if x==1 or x==0])==0, None
         self.obs=self.getobs()
-        self.observation_space = self.obs
-        return self.obs,reward, len([x for x in self.deck if x==1 or x==3])==0, None
-
+        # return self.obs,reward, True, None
+        return self.obs,reward, len([x for x in self.deck if x==1 or x==0])==0, None
     def render(self):
         print(self.deck)
 
 class A2CAgent:
     def __init__(self, model):
-        self.params = {'value': 1/40, 'entropy': 0.001, 'gamma': 0.99}
+        self.params = {'value': 0.1, 'entropy': 0.01, 'gamma': 0.99}
         self.model = model
         self.model.compile(
-            optimizer=ko.RMSprop(lr=0.0001),
+            optimizer=ko.RMSprop(lr=0.001),
             # define separate losses for policy logits and value estimate
             loss=[self._logits_loss, self._value_loss]
         )
@@ -114,7 +129,8 @@ class A2CAgent:
     def test(self, env, render=False):
         obs, done, ep_reward = env.reset(), False, 0
         i=0
-        print('testing', obs[None, :])
+        print('testing')
+        # print(obs[None, :])
         while not done:
             action, _ = self.model.action_value(obs[None, :])
             # print('action', action)
@@ -124,14 +140,14 @@ class A2CAgent:
             i+=1
             if i>=200:
                 done=True
-                print(': ',len([x for x in obs if x!=9]))
+                print('Good: ',len([x for x in obs if x==3]))
             #     print('done')
             # elif i%10==0:
             #     print('-- ',i)
             if render:
                 env.render()
-        print("%d out of 200" % ep_reward)
-        print(obs[None, :])
+                print("%d out of 200" % ep_reward)
+                print(obs[None, :])
         return ep_reward
     
     
@@ -144,13 +160,16 @@ class A2CAgent:
         ep_rews = [0.0]
         next_obs = env.reset()
         for update in range(updates):
+            print('!=-100: ',len([x for x in rewards if x>0]),'/',len(rewards))
             if update%20==0:
                 print(update)
             if update%50==0 and update>0:
                 print("%d out of 200" % self.test(env))
+                
             for step in range(batch_sz):
                 observations[step] = next_obs.copy()
                 actions[step], values[step] = self.model.action_value(next_obs[None, :])
+                actions[step] = env.cardgood(actions[step])
                 next_obs, rewards[step], dones[step], _ = env.step(actions[step])
 
                 ep_rews[-1] += rewards[step]
@@ -183,8 +202,8 @@ model=Model(40)
 env =envn(1)
 
 agent = A2CAgent(model)
-rewards_sum = agent.test(env)
-print("%d out of 200" % rewards_sum) # 18 out of 200
-# rewards_history = agent.train(env, updates=20)
-# print("Finished training, testing...")
-# print("%d out of 200" % agent.test(env)) # 200 out of 200
+# rewards_sum = agent.test(env)
+# print("%d out of 200" % rewards_sum) # 18 out of 200
+rewards_history = agent.train(env, updates=1000)
+print("Finished training, testing...")
+print("%d out of 200" % agent.test(env)) # 200 out of 200
