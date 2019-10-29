@@ -14,7 +14,7 @@ var wait = false;
 
 
 function setup() {
-    console.log(statodeck)
+    // console.log(statodeck)
     createCanvas(400, 400);
     background(220);
     for (j = 0; j < 4; j++) {
@@ -76,7 +76,7 @@ function mouseClicked() {
 function draw() {
     background(220);
     if (!finished) {
-        console.log(statodeck);
+        // console.log(statodeck);
         if (!p2Played && p2.cards.length > 0) {
             p2.cards.forEach(element => {
                 element.chosen = false;
@@ -127,7 +127,7 @@ function draw() {
                 p2Played = null;
                 p1Played = null;
                 if (deck.length == 0 && p1.cards.length == 0 && p2.cards.length == 0) {
-                    console.log('End!');
+                    // console.log('End!');
                     finished = true;
                 } else if (deck.length > 0) {
                     var c = deck.slice(0, 2);
@@ -152,7 +152,8 @@ function draw() {
                         cavv = p2Played.id;
                     }
                     p1.isthinking = true;
-                    p1.playCard(null, briscola.seme, cavv);
+                    //p1.playCard(null, briscola.seme, cavv);
+                    p1.playCard(statodeck,briscola.seme)
                 } else if (curPlayer === p1.id && !p1.ishuman && p1.selectedCard) {
                     p1Played = p1.selectedCard;
                     statodeck[p1.selectedCard.id - 1] = statuses[2];
@@ -168,7 +169,8 @@ function draw() {
                     if (p1Played) {
                         cavv = p1Played.id;
                     }
-                    p2.playCard(null, briscola.seme, cavv);
+                    //p2.playCard(null, briscola.seme, cavv);
+                    p2.playCard(statodeck,briscola.seme)
                 } else if (curPlayer === p2.id && !p2.ishuman && p2.selectedCard) {
                     p2Played = p2.selectedCard;
                     statodeck[p2.selectedCard.id - 1] = statuses[4];

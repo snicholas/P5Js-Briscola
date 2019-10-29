@@ -6,32 +6,33 @@ class Player {
         this.score = 0;
         this.isthinking = false;
         this.selectedCard = null;
-        this.playCard = function (card, briscolaSeme, cavv) {
+        this.playCard = function (deck, seed) {
             let self = this;
             self.isthinking = true;
-            if (cavv == null) {
-                cavv = 0;
-            }
+            // if (cavv == null) {
+            //     cavv = 0;
+            // }
             if (!self.ishuman) {
-                let c1 = self.cards[0].id;
-                let c2 = 0;
-                let c3 = 0;
-                if (self.cards.length > 1) {
-                    c2 = self.cards[1].id;
-                    if (self.cards.length == 3) {
-                        c3 = self.cards[2].id;
-                    }
-                }
-                let dt = {
-                    "c1": c1,
-                    "c2": c2,
-                    "c3": c3,
-                    "ca": cavv,
-                    "briscola": briscolaSeme,
+                // let c1 = self.cards[0].id;
+                // let c2 = 0;
+                // let c3 = 0;
+                // if (self.cards.length > 1) {
+                //     c2 = self.cards[1].id;
+                //     if (self.cards.length == 3) {
+                //         c3 = self.cards[2].id;
+                //     }
+                // }
+                // let dt = {
+                //     "c1": c1,
+                //     "c2": c2,
+                //     "c3": c3,
+                //     "ca": cavv,
+                //     "briscola": briscolaSeme,
 
-                }
+                // }
                 let c = -1;
-                postData('http://127.0.0.1:5000/briscola/playcard', dt).then(function (v) {
+                postData('http://127.0.0.1:5000/briscola/playcardV2', {deck:deck, player:this.id, seed})
+                .then(function (v) {
                     c = v;
                     let tc = self.cards.find(function (cc) { return cc.id == c; });
                     var idx = -1;
