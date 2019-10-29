@@ -113,13 +113,13 @@ class A2CAgent:
             ep_reward += reward
             # print(i,': ',len([x for x in obs if x==9]))
             i+=1
-            if i>200:
+            if i>=200:
                 done=True
-            if i%10==0:
-                print('-- '%i)
+            #     print('done')
+            # elif i%10==0:
+            #     print('-- ',i)
             if render:
                 env.render()
-        print("%d out of 200" % agent.test(env))
         return ep_reward
     
     
@@ -173,6 +173,6 @@ env =envn(1)
 agent = A2CAgent(model)
 # rewards_sum = agent.test(env)
 # print("%d out of 200" % rewards_sum) # 18 out of 200
-rewards_history = agent.train(env, updates=1000)
+rewards_history = agent.train(env, updates=200)
 print("Finished training, testing...")
 print("%d out of 200" % agent.test(env)) # 200 out of 200
