@@ -44,21 +44,28 @@ class envn():
     deck = []
     seed = -1
     player=-1
+    obs = []
     observation_space = []
     def __init__(self, player):
         self.reset()
         self.player=player
     def reset(self):
         self.deck = np.array([0 for x in range(40)])
-        self.observation_space =np.array([0 for x in range(40)])
         self.seed=random.randint(0,3)
         cards = random.sample(range(40), 6)
         for i in range(3):
             self.deck[cards[i]]=1
         # for i in range(3,6):
         #     self.deck[cards[i]]=3
-        return self.deck
-
+        self.obs=self.getobs()
+        self.observation_space = self.getobs()
+        print(self.obs)
+        return self.obs
+    def getobs(self):
+        ob=[]
+        ob.extend(self.deck)
+        ob.append(self.seed)
+        return np.array(ob)
     def step(self, action):
         reward = -1
         if self.deck[action]==self.player:
@@ -67,8 +74,10 @@ class envn():
             if(len(samples)>0):
                 card = random.sample(samples,1)[0]
                 self.deck[card]=self.player
-            reward=1
-        return self.deck,reward, len([x for x in self.deck if x==1 or x==3])==0, None
+            reward=10
+        self.obs=self.getobs()
+        self.observation_space = self.obs
+        return self.obs,reward, len([x for x in self.deck if x==1 or x==3])==0, None
 
     def render(self):
         print(self.deck)
@@ -105,7 +114,7 @@ class A2CAgent:
     def test(self, env, render=False):
         obs, done, ep_reward = env.reset(), False, 0
         i=0
-        print('testing')
+        print('testing', obs[None, :])
         while not done:
             action, _ = self.model.action_value(obs[None, :])
             # print('action', action)
@@ -115,15 +124,18 @@ class A2CAgent:
             i+=1
             if i>=200:
                 done=True
+                print(': ',len([x for x in obs if x!=9]))
             #     print('done')
             # elif i%10==0:
             #     print('-- ',i)
             if render:
                 env.render()
+        print("%d out of 200" % ep_reward)
+        print(obs[None, :])
         return ep_reward
     
     
-    def train(self, env, batch_sz=128, updates=1000):
+    def train(self, env, batch_sz=40, updates=1000):
         # storage helpers for a single batch of data
         actions = np.empty((batch_sz,), dtype=np.int32)
         rewards, dones, values = np.empty((3, batch_sz))
@@ -171,8 +183,8 @@ model=Model(40)
 env =envn(1)
 
 agent = A2CAgent(model)
-# rewards_sum = agent.test(env)
-# print("%d out of 200" % rewards_sum) # 18 out of 200
-rewards_history = agent.train(env, updates=200)
-print("Finished training, testing...")
-print("%d out of 200" % agent.test(env)) # 200 out of 200
+rewards_sum = agent.test(env)
+print("%d out of 200" % rewards_sum) # 18 out of 200
+# rewards_history = agent.train(env, updates=20)
+# print("Finished training, testing...")
+# print("%d out of 200" % agent.test(env)) # 200 out of 200
