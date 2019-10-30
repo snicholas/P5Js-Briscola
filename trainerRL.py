@@ -4,6 +4,7 @@ import tensorflow.keras.layers as kl
 import random
 import tensorflow.keras.losses as kls
 import tensorflow.keras.optimizers as ko
+import gc
 
 tf.executing_eagerly()
 
@@ -17,8 +18,8 @@ class Model(tf.keras.Model):
     def __init__(self, num_actions):
         super().__init__('mlp_policy')
         # no tf.get_variable(), just simple Keras API
-        self.hidden1 = kl.Dense(16, activation='relu')
-        self.hidden2 = kl.Dense(16, activation='relu')
+        self.hidden1 = kl.Dense(128, activation='relu')
+        self.hidden2 = kl.Dense(128, activation='relu')
         self.value = kl.Dense(1, name='value')
         # logits are unnormalized log probabilities
         self.logits = kl.Dense(num_actions, name='policy_logits')
@@ -102,18 +103,24 @@ class envn():
         choice=0
         # print('action: ', action)
         if action >= len(cards):
-            ends= len([x for x in self.deck[:-1] if x==1 or x==0])==0 and len([x for x in self.deckadv[:-1] if x==1 or x==0])==0
+            ends= len([x for x in self.deck if x==1 or x==0])==0 and len([x for x in self.deckadv if x==1 or x==0])==0
             return self.obs,reward, ends, None
         if len(cards)>0:
             choice=cards[action]
             self.deck[choice]=2
             win, punti = False,-1
             if self.turn==self.player:
-                cardadv = random.sample([i for i,x in enumerate(self.deckadv[:-1]) if x==1],1)[0]
-                self.deckadv[cardadv]=2
-                win, punti=self.handwinner(choice, cardadv)
+                s = [i for i,x in enumerate(self.deckadv) if x==1]
+                if len(s)==0:
+                    self.render()
+                    ends= len([x for x in self.deck if x==1 or x==0])==0 and len([x for x in self.deckadv if x==1 or x==0])==0
+                    return self.obs,reward, ends, None
+                else:
+                    cardadv = random.sample(s,1)[0]
+                    self.deckadv[cardadv]=2
+                    win, punti=self.handwinner(choice, cardadv)
             else:
-                cardadv = [i for i,x in enumerate(self.deckadv[:-1]) if x==2][0]
+                cardadv = [i for i,x in enumerate(self.deckadv) if x==2][0]
                 win, punti=self.handwinner(cardadv,choice)
             if win:
                 reward+=punti
@@ -122,7 +129,7 @@ class envn():
                 self.deck[cardadv]=4
                 self.deckadv[cardadv]=5
                 self.deckadv[choice]=5
-                sample=[i for i,x in enumerate(self.deckfull[:-1]) if x==0]
+                sample=[i for i,x in enumerate(self.deckfull) if x==0]
                 if len(sample)>1:
                     cards = random.sample(sample,2)
                     self.deck[cards[0]] = 1
@@ -136,28 +143,29 @@ class envn():
                 self.deck[cardadv]=5
                 self.deckadv[cardadv]=4
                 self.deckadv[choice]=4
-                sample=[i for i,x in enumerate(self.deckfull[:-1]) if x==0]
+                sample=[i for i,x in enumerate(self.deckfull) if x==0]
                 if len(sample)>1:
                     cards = random.sample(sample,2)
                     self.deck[cards[1]] = 1
                     self.deckadv[cards[0]]=1
                     self.deckfull[cards[0]]=-1
                     self.deckfull[cards[1]]=-1
-                if 1 in self.deckadv[:-1]:
-                    cardadv = [i for i,x in enumerate(self.deckadv[:-1]) if x==1][0]
+                if 1 in self.deckadv:
+                    cardadv = [i for i,x in enumerate(self.deckadv) if x==1][0]
                 
                 self.deckadv[cardadv]=2
 
             # reward=1
             self.obs=self.getobs()
             self.observation_space = self.obs
-            ends= len([x for x in self.deck[:-1] if x==1 or x==0])==0 and len([x for x in self.deckadv[:-1] if x==1 or x==0])==0
+            ends= len([x for x in self.deck if x==1 or x==0])==0 and len([x for x in self.deckadv if x==1 or x==0])==0
             return self.obs,reward, ends, None
         self.obs=self.getobs()
         # return self.obs,reward, True, None
         return self.obs,reward, len([x for x in self.deck if x==1 or x==0])==0, None
     def render(self):
         print('turn:',self.turn)
+        print('deckfull: ',self.deckfull)
         print('deck: ',self.deck)
         print('deckadv: ',self.deckadv)
         print('*'*20)
@@ -210,7 +218,7 @@ class A2CAgent:
             #     print('-- ',i)
             if render:
                 env.render()
-                print("%d out of 200" % ep_reward)
+                print("reward: %d" % ep_reward)
                 # print(obs[None, :])
         return ep_reward
     
@@ -224,11 +232,10 @@ class A2CAgent:
         ep_rews = [0.0]
         next_obs = env.reset()
         for update in range(updates):
-            # print('!=-100: ',len([x for x in rewards if x>0]),'/',len(rewards))
-            if update%20==0:
-                print(update)
+            # if update%20==0:
+            #     print(update)
             if update%50==0 and update>0:
-                print("%d out of 200" % self.test(env))
+                print("reward after %d updates: %d" % (update,self.test(env)))
                 
             for step in range(batch_sz):
                 observations[step] = next_obs.copy()
@@ -262,16 +269,26 @@ class A2CAgent:
         return returns, advantages
 
 if __name__ == '__main__':
-    model=Model(3)
+    rh=[]
+    for i in range(4):
+        with tf.Graph().as_default() as graph:
+            print("round ", i+1)
+            model=Model(3)
+            model.load_weights('assets/rl500_2_128ch')
+            env =envn(1)
 
-    env =envn(1)
-
-    agent = A2CAgent(model)
-    # # rewards_sum = agent.test(env,render=True)
-    # # print("%d out of 200" % rewards_sum) # 18 out of 200
-    rewards_history = agent.train(env, updates=2000)
-    print("Finished training, testing...")
-    print("%d out of 200" % agent.test(env)) # 200 out of 200
-    # model.save('assets/rl200.h5', save_format="tf") 
-    # tf.saved_model.save(model, "assets/rl20/1/")
-    model.save_weights('assets/rl2000ch')
+            agent = A2CAgent(model)
+            # # rewards_sum = agent.test(env,render=True)
+            # # print("reward: %d" % rewards_sum) 
+            rewards_history = agent.train(env, updates=10)
+            print("Finished training, testing...")
+            print("reward: %d" % agent.test(env)) 
+            # model.save('assets/rl200.h5', save_format="tf") 
+            # tf.saved_model.save(model, "assets/rl20/1/")
+            # rh.append(rewards_history)
+            model.save_weights('assets/rl500_2_128ch')
+            model=None
+            env=None
+            agent=None
+            rewards_history=None
+            gc.collect()

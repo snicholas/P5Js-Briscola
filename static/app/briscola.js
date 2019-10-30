@@ -33,7 +33,7 @@ function setup() {
     }
     shuffle(deck, true);
     briscola = deck[38];
-    p1 = new Player(false, 1);
+    p1 = new Player(true, 1);
     p2 = new Player(false, 2);
     p1.cards = deck.slice(0, 3);
     deck = deck.slice(3);
@@ -111,7 +111,7 @@ function draw() {
         y = 20;
         x = 20;
         for (var i = 0; i < p2.cards.length; i++) {
-            p2.cards[i].display(true, x, y);
+            p2.cards[i].display(p2.cards[i].chosen, x, y);
             x += 60;
         }
         y = 200;
@@ -131,7 +131,7 @@ function draw() {
             setTimeout(function() {
                 loop();
                 wait = false;
-            }, 100);
+            }, 1000);
         } else {
             if (played >= 2) {
                 played = 0;
@@ -263,7 +263,7 @@ function winner(c1, c2) {
         statodeckp2[c1.id - 1] = statusesv2[4];
         statodeckp2[c2.id - 1] = statusesv2[4];
         curPlayer = p2.id;
-    } else if (c1.value > c2.value && c1.seme === c2.seme && c1.numuero > c2.numero) {
+    } else if (c1.value == c2.value && c1.seme === c2.seme && c1.numuero > c2.numero) {
         p1.score += (c1.value + c2.value);
         statodeck[c1.id - 1] = statuses[5];
         statodeck[c2.id - 1] = statuses[5];

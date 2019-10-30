@@ -46,8 +46,10 @@ class Card {
         rect(x, y, w, h, 20);
         fill(0);
         textSize(10);
-        text(this.numero, x + 10, y + 40);
-        text(semi[this.seme], x + 10, y + 60);
+        if(visible){
+            text(this.numero, x + 10, y + 40);
+            text(semi[this.seme], x + 10, y + 60);
+        }
     }
 
 

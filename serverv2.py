@@ -13,7 +13,7 @@ def init():
     model=Model(3)
     model.load_weights('assets/rl20ch')
     model2=Model(3)
-    model2.load_weights('assets/rl2000ch')
+    model2.load_weights('assets/rl500ch')
 
 
 @app.route("/play",  methods=['GET'])
@@ -30,7 +30,7 @@ def playcard():
     if player==1:
         action, _  = model2.action_value(deck[None, :])
     else:    
-        action, _  = model.action_value(deck[None, :])
+        action, _  = model2.action_value(deck[None, :])
     print('action', action)
     return jsonify(int(action))
 
