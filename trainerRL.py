@@ -143,7 +143,7 @@ class envn():
                     self.deckadv[cards[0]]=1
                     self.deckfull[cards[0]]=-1
                     self.deckfull[cards[1]]=-1
-                if 1 in self.deckadv:
+                if 1 in self.deckadv[:-1]:
                     cardadv = [i for i,x in enumerate(self.deckadv[:-1]) if x==1][0]
                 
                 self.deckadv[cardadv]=2
