@@ -31,25 +31,32 @@ class Player {
 
                 // }
                 let c = -1;
-                postData('http://127.0.0.1:5000/briscola/playcardV2', {deck:deck, player:this.id, seed})
+                postData('http://127.0.0.1:5000/briscola/playcard', {deck:deck, player:this.id, seed})
                 .then(function (v) {
                     c = v;
-                    let tc = self.cards.find(function (cc) { return cc.id == c; });
-                    var idx = -1;
-                    if (tc) {
-                        self.cards.forEach((el,ix) => {
-                            if(el.id==tc.id){
-                                idx=ix;
-                            }
-                        });
-                        self.selectedCard = tc;
+                    // let tc = self.cards.find(function (cc) { return cc.id == c; });
+                    // var idx = -1;
+                    // if (tc) {
+                    //     self.cards.forEach((el,ix) => {
+                    //         if(el.id==tc.id){
+                    //             idx=ix;
+                    //         }
+                    //     });
+                    //     self.selectedCard = tc;
+                    // } else {
+                    //     idx=floor(random(self.cards.length));
+                    //     self.selectedCard = self.cards[idx];
+                    // }
+                    // self.isthinking = false;
+                    // if(idx!=-1 && self.cards.length>0){
+                    //     self.cards[idx].chosen = true;
+                    // }
+                    if(v<self.cards.length){
+                        self.selectedCard = self.cards[v];
+                        self.cards[v].chosen=true;
                     } else {
-                        idx=floor(random(self.cards.length));
-                        self.selectedCard = self.cards[idx];
-                    }
-                    self.isthinking = false;
-                    if(idx!=-1 && self.cards.length>0){
-                        self.cards[idx].chosen = true;
+                        self.selectedCard = self.cards[0];
+                        self.cards[0].chosen=true;
                     }
                 })
             }

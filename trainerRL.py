@@ -43,59 +43,124 @@ class Model(tf.keras.Model):
 class envn():
     statuses = ['indeck', 'hand', 'played', 'p2played','p1taken', 'p2taken']
     deck = []
+    deckadv = []
+    deckfull = []
     seed = -1
     player=-1
     obs = []
     observation_space = []
+    turn = 1
     def __init__(self, player):
         self.reset()
-        self.player=player
+        self.player=1
     def reset(self):
+        self.deckfull = np.array([0 for x in range(40)])
         self.deck = np.array([0 for x in range(40)])
+        self.deckadv = np.array([0 for x in range(40)])
         self.seed=random.randint(0,3)
         cards = random.sample(range(40), 6)
         for i in range(3):
             self.deck[cards[i]]=1
-        # for i in range(3,6):
-        #     self.deck[cards[i]]=3
+            self.deckfull[cards[i]]=-1
+        for i in range(3,6):
+            self.deckadv[cards[i]]=1
+            self.deckfull[cards[i]]=-1
         self.obs=self.getobs()
         self.observation_space = self.getobs()
+        self.turn=1
         # print(self.obs)
         return self.obs
     def getobs(self):
         ob=[]
         ob.extend(self.deck)
-        # ob.append(self.seed)
-        samples = [i for i,x in enumerate(self.deck) if x==1]
-        for i in range(3-len(samples)):
-            samples.append(-1)
+        ob.append(self.seed)
+        # samples = [i for i,x in enumerate(self.deck) if x==1]
+        # for i in range(3-len(samples)):
+        #     samples.append(-1)
         # ob.extend(samples)
         # print(ob)
         return np.array(ob)
-    def cardgood(self, action):
-        if self.deck[action]==self.player:
-            return action
-        else:
-            samples = [i for i,x in enumerate(self.deck) if x==1]
-            return random.sample(samples,1)[0]
+    cardvalues ={
+        1:11,2:0,3:10,4:0,5:0,6:0,7:0,8:2,9:3,10:4
+    }
+    def handwinner(self, card, cardadv):
+        # print(card,cardadv,self.seed)
+        isbriscola=card%10==self.seed
+        isbriscolaadv=card%10==self.seed
+        valore = self.cardvalues[(card%10)+1]
+        valoreadv = self.cardvalues[(cardadv%10)+1]
+        punti=valore+valoreadv
+        if isbriscola and not isbriscolaadv:
+            return True, punti
+        if not isbriscola and isbriscolaadv:
+            return False, punti
+        return valore>valoreadv, punti
     def step(self, action):
         # print('action:',action)
-        reward = -1
-        if self.deck[action]==self.player:
-            self.deck[action]=3
-            samples = [i for i,x in enumerate(self.deck) if x==0]
-            if(len(samples)>0):
-                card = random.sample(samples,1)[0]
-                self.deck[card]=self.player
-            reward=1
+        reward = 0
+        cards = [i for i,x in enumerate(self.deck) if x==1]
+        choice=0
+        # print('action: ', action)
+        if action >= len(cards):
+            ends= len([x for x in self.deck[:-1] if x==1 or x==0])==0 and len([x for x in self.deckadv[:-1] if x==1 or x==0])==0
+            return self.obs,reward, ends, None
+        if len(cards)>0:
+            choice=cards[action]
+            self.deck[choice]=2
+            win, punti = False,-1
+            if self.turn==self.player:
+                cardadv = random.sample([i for i,x in enumerate(self.deckadv[:-1]) if x==1],1)[0]
+                self.deckadv[cardadv]=2
+                win, punti=self.handwinner(choice, cardadv)
+            else:
+                cardadv = [i for i,x in enumerate(self.deckadv[:-1]) if x==2][0]
+                win, punti=self.handwinner(cardadv,choice)
+            if win:
+                reward+=punti
+                self.turn=self.player
+                self.deck[choice]=4
+                self.deck[cardadv]=4
+                self.deckadv[cardadv]=5
+                self.deckadv[choice]=5
+                sample=[i for i,x in enumerate(self.deckfull[:-1]) if x==0]
+                if len(sample)>1:
+                    cards = random.sample(sample,2)
+                    self.deck[cards[0]] = 1
+                    self.deckadv[cards[1]]=1
+                    self.deckfull[cards[0]]=-1
+                    self.deckfull[cards[1]]=-1
+            else:
+                reward-=punti
+                self.turn=2
+                self.deck[choice]=5
+                self.deck[cardadv]=5
+                self.deckadv[cardadv]=4
+                self.deckadv[choice]=4
+                sample=[i for i,x in enumerate(self.deckfull[:-1]) if x==0]
+                if len(sample)>1:
+                    cards = random.sample(sample,2)
+                    self.deck[cards[1]] = 1
+                    self.deckadv[cards[0]]=1
+                    self.deckfull[cards[0]]=-1
+                    self.deckfull[cards[1]]=-1
+                if 1 in self.deckadv:
+                    cardadv = [i for i,x in enumerate(self.deckadv[:-1]) if x==1][0]
+                
+                self.deckadv[cardadv]=2
+
+            # reward=1
             self.obs=self.getobs()
             self.observation_space = self.obs
-            return self.obs,reward, len([x for x in self.deck if x==1 or x==0])==0, None
+            ends= len([x for x in self.deck[:-1] if x==1 or x==0])==0 and len([x for x in self.deckadv[:-1] if x==1 or x==0])==0
+            return self.obs,reward, ends, None
         self.obs=self.getobs()
         # return self.obs,reward, True, None
         return self.obs,reward, len([x for x in self.deck if x==1 or x==0])==0, None
     def render(self):
-        print(self.deck)
+        print('turn:',self.turn)
+        print('deck: ',self.deck)
+        print('deckadv: ',self.deckadv)
+        print('*'*20)
 
 class A2CAgent:
     def __init__(self, model):
@@ -140,14 +205,13 @@ class A2CAgent:
             i+=1
             if i>=200:
                 done=True
-                print('Good: ',len([x for x in obs if x==3]))
             #     print('done')
             # elif i%10==0:
             #     print('-- ',i)
             if render:
                 env.render()
                 print("%d out of 200" % ep_reward)
-                print(obs[None, :])
+                # print(obs[None, :])
         return ep_reward
     
     
@@ -160,7 +224,7 @@ class A2CAgent:
         ep_rews = [0.0]
         next_obs = env.reset()
         for update in range(updates):
-            print('!=-100: ',len([x for x in rewards if x>0]),'/',len(rewards))
+            # print('!=-100: ',len([x for x in rewards if x>0]),'/',len(rewards))
             if update%20==0:
                 print(update)
             if update%50==0 and update>0:
@@ -169,7 +233,7 @@ class A2CAgent:
             for step in range(batch_sz):
                 observations[step] = next_obs.copy()
                 actions[step], values[step] = self.model.action_value(next_obs[None, :])
-                actions[step] = env.cardgood(actions[step])
+                # env.render()
                 next_obs, rewards[step], dones[step], _ = env.step(actions[step])
 
                 ep_rews[-1] += rewards[step]
@@ -197,13 +261,17 @@ class A2CAgent:
         advantages = returns - values
         return returns, advantages
 
-model=Model(40)
+if __name__ == '__main__':
+    model=Model(3)
 
-env =envn(1)
+    env =envn(1)
 
-agent = A2CAgent(model)
-# rewards_sum = agent.test(env)
-# print("%d out of 200" % rewards_sum) # 18 out of 200
-rewards_history = agent.train(env, updates=1000)
-print("Finished training, testing...")
-print("%d out of 200" % agent.test(env)) # 200 out of 200
+    agent = A2CAgent(model)
+    # # rewards_sum = agent.test(env,render=True)
+    # # print("%d out of 200" % rewards_sum) # 18 out of 200
+    rewards_history = agent.train(env, updates=2000)
+    print("Finished training, testing...")
+    print("%d out of 200" % agent.test(env)) # 200 out of 200
+    # model.save('assets/rl200.h5', save_format="tf") 
+    # tf.saved_model.save(model, "assets/rl20/1/")
+    model.save_weights('assets/rl2000ch')
