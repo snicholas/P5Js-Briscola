@@ -33,7 +33,7 @@ function setup() {
     }
     shuffle(deck, true);
     briscola = deck[38];
-    p1 = new Player(true, 1);
+    p1 = new Player(false, 1);
     p2 = new Player(false, 2);
     p1.cards = deck.slice(0, 3);
     deck = deck.slice(3);
@@ -131,7 +131,7 @@ function draw() {
             setTimeout(function() {
                 loop();
                 wait = false;
-            }, 1000);
+            }, 100);
         } else {
             if (played >= 2) {
                 played = 0;

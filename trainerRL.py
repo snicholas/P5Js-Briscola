@@ -5,7 +5,8 @@ import random
 import tensorflow.keras.losses as kls
 import tensorflow.keras.optimizers as ko
 import gc
-
+import matplotlib
+import matplotlib.pyplot as plt
 tf.executing_eagerly()
 
 
@@ -27,7 +28,7 @@ class Model(tf.keras.Model):
 
     def call(self, inputs):
         # inputs is a numpy array, convert to Tensor
-        x = tf.convert_to_tensor(inputs, dtype=tf.int32)
+        x = tf.convert_to_tensor(inputs)
         # separate hidden layers from the same input tensor
         hidden_logs = self.hidden1(x)
         hidden_vals = self.hidden2(x)
@@ -73,8 +74,8 @@ class envn():
         return self.obs
     def getobs(self):
         ob=[]
-        ob.extend(self.deck)
-        ob.append(self.seed)
+        ob.extend(self.deck/6.)
+        ob.append(self.seed/4.)
         # samples = [i for i,x in enumerate(self.deck) if x==1]
         # for i in range(3-len(samples)):
         #     samples.append(-1)
@@ -106,7 +107,7 @@ class envn():
             ends= len([x for x in self.deck if x==1 or x==0])==0 and len([x for x in self.deckadv if x==1 or x==0])==0
             return self.obs,reward, ends, None
         if len(cards)>0:
-            choice=cards[action]
+            choice=cards[int(action)]
             self.deck[choice]=2
             win, punti = False,-1
             if self.turn==self.player:
@@ -172,10 +173,10 @@ class envn():
 
 class A2CAgent:
     def __init__(self, model):
-        self.params = {'value': 0.1, 'entropy': 0.01, 'gamma': 0.99}
+        self.params = {'value': 0.5, 'entropy': 0.01, 'gamma': 0.99}
         self.model = model
         self.model.compile(
-            optimizer=ko.RMSprop(lr=0.001),
+            optimizer=ko.RMSprop(lr=0.0001),
             # define separate losses for policy logits and value estimate
             loss=[self._logits_loss, self._value_loss]
         )
@@ -192,7 +193,7 @@ class A2CAgent:
         weighted_sparse_ce = kls.SparseCategoricalCrossentropy(from_logits=True)
         # policy loss is defined by policy gradients, weighted by advantages
         # note: we only calculate the loss on the actions we've actually taken
-        actions = tf.cast(actions, tf.int32)
+        actions = tf.cast(actions, tf.int64)
         policy_loss = weighted_sparse_ce(actions, logits, sample_weight=advantages)
         # entropy loss can be calculated via CE over itself
         entropy_loss = kls.categorical_crossentropy(logits, logits, from_logits=True)
@@ -225,7 +226,7 @@ class A2CAgent:
     
     def train(self, env, batch_sz=40, updates=1000):
         # storage helpers for a single batch of data
-        actions = np.empty((batch_sz,), dtype=np.int32)
+        actions = np.empty((batch_sz,), dtype=np.float)
         rewards, dones, values = np.empty((3, batch_sz))
         observations = np.empty((batch_sz,) + env.observation_space.shape)
         # training loop: collect samples, send to optimizer, repeat updates times
@@ -234,8 +235,8 @@ class A2CAgent:
         for update in range(updates):
             # if update%20==0:
             #     print(update)
-            if update%50==0 and update>0:
-                print("reward after %d updates: %d" % (update,self.test(env)))
+            if update%500==0 and update>0:
+                print("reward after %d updates: %f" % (update, sum(ep_rews)/(len(ep_rews))))
                 
             for step in range(batch_sz):
                 observations[step] = next_obs.copy()
@@ -269,26 +270,54 @@ class A2CAgent:
         return returns, advantages
 
 if __name__ == '__main__':
+    # gpuav = tf.test.is_gpu_available(
+    #     cuda_only=False,
+    #     min_cuda_compute_capability=None
+    # )
+    # print(gpuav)
+    # print("Num GPUs Available: ", len(tf.config.experimental.list_physical_devices('GPU')))
+    # model=Model(3)
+    # model.load_weights('assets/rl500_2_128chuby')
+    # model.save_weights('assets/rl500_2_128chuby_2')
     rh=[]
     for i in range(4):
         with tf.Graph().as_default() as graph:
             print("round ", i+1)
             model=Model(3)
-            model.load_weights('assets/rl500_2_128ch')
+            model.load_weights('assets/rl500_2_128chuby_2')
             env =envn(1)
 
             agent = A2CAgent(model)
             # # rewards_sum = agent.test(env,render=True)
             # # print("reward: %d" % rewards_sum) 
-            rewards_history = agent.train(env, updates=10)
-            print("Finished training, testing...")
+            rewards_history = agent.train(env, updates=5000)
+            rewmean=1.*sum(rewards_history)/len(rewards_history)
+            rh.extend(rewards_history)
+            print("Finished training, mean reward:", rewmean)
             print("reward: %d" % agent.test(env)) 
             # model.save('assets/rl200.h5', save_format="tf") 
             # tf.saved_model.save(model, "assets/rl20/1/")
             # rh.append(rewards_history)
-            model.save_weights('assets/rl500_2_128ch')
+            model.save_weights('assets/rl500_2_128chuby_2')
             model=None
             env=None
             agent=None
             rewards_history=None
             gc.collect()
+    fig, ax = plt.subplots()
+    rhm = []
+    rp=0
+    for i in range(len(rh)):
+        if i>0 and i%500==0:
+            rhm.append(rp/500.)
+            rp=0
+        rp+=rh[i]        
+    rhm.append(rp/500.)
+    print(len(rh),len(rhm))
+    ax.scatter([i for i in range(len(rhm))], rhm)
+    ax.set(xlabel='Episode', ylabel='Reward',
+    title='Rewards over episodes')
+    ax.grid()
+
+    fig.savefig("test.png")
+    plt.show()

@@ -11,9 +11,9 @@ cors = CORS(app, resources={r"/briscola/*": {"origins": "*"}})
 def init():
     global model, model2
     model=Model(3)
-    model.load_weights('assets/rl20ch')
+    model.load_weights('assets/rl500_2_128chuby_2')
     model2=Model(3)
-    model2.load_weights('assets/rl500ch')
+    model2.load_weights('assets/rl500_2_128chuby')
 
 
 @app.route("/play",  methods=['GET'])
@@ -24,11 +24,11 @@ def game():
 def playcard():
     inData =  request.get_json(force=True)
     deck,seed,player=inData["deck"],inData['seed'], inData['player']
-    deck=[statusesRl.index(x) for x in deck ]
-    deck.append(seed)
+    deck=[statusesRl.index(x)/6. for x in deck ]
+    deck.append(seed/4.)
     deck=np.array(deck)
     if player==1:
-        action, _  = model2.action_value(deck[None, :])
+        action, _  = model.action_value(deck[None, :])
     else:    
         action, _  = model2.action_value(deck[None, :])
     print('action', action)
