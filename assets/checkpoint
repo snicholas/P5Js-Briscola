@@ -1,2 +1,2 @@
-model_checkpoint_path: "rl500_2_128chuby_2"
-all_model_checkpoint_paths: "rl500_2_128chuby_2"
+model_checkpoint_path: "rl500_2_128chuby_3"
+all_model_checkpoint_paths: "rl500_2_128chuby_3"

@@ -11,9 +11,9 @@ cors = CORS(app, resources={r"/briscola/*": {"origins": "*"}})
 def init():
     global model, model2
     model=Model(3)
-    model.load_weights('assets/rl500_2_128chuby_2')
+    model.load_weights('assets/rl500_2_128chuby_3')
     model2=Model(3)
-    model2.load_weights('assets/rl500_2_128chuby')
+    model2.load_weights('assets/rl500_2_128chuby_2')
 
 
 @app.route("/play",  methods=['GET'])
